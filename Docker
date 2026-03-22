@@ -1,21 +1,23 @@
-ARG PYTHON_VERSION=3.11-slim
+# Use modern Python (fix your autobahn issue)
+FROM python:3.11-slim
 
-FROM python:${PYTHON_VERSION}
+# Set working directory
+WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# Prevent Python from buffering logs
+ENV PYTHONUNBUFFERED=1
 
-RUN mkdir -p /code
+# Copy requirements first (for caching)
+COPY requirements.txt .
 
-WORKDIR /code
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY requirements.txt /tmp/requirements.txt
-RUN set -ex && \
-    pip install --upgrade pip && \
-    pip install -r /tmp/requirements.txt && \
-    rm -rf /root/.cache/
-COPY . /code
+# Copy all files
+COPY . .
 
-EXPOSE 8000
+# Expose port for Fly.io
+EXPOSE 8080
 
-CMD ["python","main.py"]
+# Run with gunicorn (production server)
+CMD ["gunicorn", "-b", "0.0.0.0:8080", "app:app"]
