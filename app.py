@@ -14,54 +14,19 @@ try:
 except:
     scaler = None
 
-
 @app.route("/")
 def home():
     return "Rain Prediction API is running!"
 
-
-# @app.route("/today_predict", methods=["POST"])
-# def today_predict():
-#     try:
-#         data = request.json
-#         if "features" not in data:
-#             return jsonify({"status": "error", "message": "Missing 'features' key"}), 400
-
-#         features = np.array(data["features"]).reshape(1, -1)
-
-#         # Apply scaling if exists
-#         if scaler:
-#             features = scaler.transform(features)
-
-#         # Check if feature count matches model
-#         if features.shape[1] != todayPredictModel.n_features_in_:
-#             return jsonify({
-#                 "status": "error",
-#                 "message": f"X has {features.shape[1]} features, but model expects {todayPredictModel.n_features_in_}."
-#             }), 400
-
-#         # Make prediction
-#         prediction = todayPredictModel.predict(features)[0]
-#         result = "Rain" if prediction == 1 else "No Rain"
-
-#         # Return as JSON (React can parse this easily)
-#         return jsonify({
-#             "status": "success",
-#             "prediction": int(prediction),
-#             "result": result
-#         }), 200
-
-#     except Exception as e:
-#         return jsonify({"status": "error", "message": str(e)}), 500
-    
-# # @app.route("/tomorrow_predict", methods=["POST"])
-
-@app.route("/rainTest", methods=['GET'])
+@app.route("/rainTest", methods=['POST'])
 def raintest():
-    # have to get the location via maps
 
-    lan=15.299396346225851 
-    lon=90.30703691717518
+    data = request.get_json()
+
+    lan = data.get("lat")
+    lon = data.get("lon")
+
+
     apiData=function.weatherApiCall(lan,lon) #function call to get api weather data
     
     data =  [
@@ -91,6 +56,15 @@ def raintest():
     # Return both results together
     return jsonify({
         "status": "success",
+        "weatherData":{
+            'temp_max':apiData['temp_max'],
+            'temp_min':apiData['temp_min'],
+            'windDir':apiData['windDir'],
+            'temp':apiData['temp'],
+            'humidity':apiData['humidity'],
+            'windSpeed':apiData['windSpeed'],
+            'pressure':apiData['pressure']
+            },
         "today": today_result,
         "tomorrow": tomorrow_result
     }), 200
