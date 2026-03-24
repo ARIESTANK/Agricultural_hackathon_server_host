@@ -8,6 +8,7 @@ import joblib
 
 todayPredictModel = joblib.load("today_rain_predict.pkl")
 tomorrowPredictModel=joblib.load("tomorrow_rain_predict.pkl")
+rainFallModel=joblib.load("rainFall_predict.pkl")
 
 # Load scaler if used
 try:
@@ -90,3 +91,28 @@ def predict_today(data, model=todayPredictModel, scaler=scaler):
     pred = model.predict(X)[0]
     result = "Rain" if pred == 1 else "No Rain"
     return {"prediction": int(pred), "result": result}
+
+
+def predict_rainfall(data, model=rainFallModel, scaler=scaler):
+    # Extract features list
+    if isinstance(data, dict) and "features" in data:
+        features = data["features"]
+    elif isinstance(data, list):
+        features = data
+    else:
+        raise ValueError("Input must be a dict with 'features' key or a list of features")
+
+    # Convert to NumPy array and reshape
+    X = np.array(features).reshape(1, -1)
+
+    # Apply scaling if available
+    if scaler:
+        X = scaler.transform(X)
+
+    # Check feature count
+    if X.shape[1] != model.n_features_in_:
+        raise ValueError(f"X has {X.shape[1]} features, but model expects {model.n_features_in_}")
+
+    # Make prediction
+    pred = model.predict(X)[0]
+    return pred

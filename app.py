@@ -52,6 +52,7 @@ def raintest():
     # Call today/tomorrow prediction functions
     today_result = function.predict_today(data)
     tomorrow_result = function.predict_tomorrow(data)
+    rainData=function.predict_rainfall(data)
 
     # Return both results together
     return jsonify({
@@ -66,7 +67,8 @@ def raintest():
             'pressure':apiData['pressure']
             },
         "today": today_result,
-        "tomorrow": tomorrow_result
+        "rainFall":rainData, # mili meter
+        "tomorrow":tomorrow_result, 
     }), 200
 
 if __name__ == "__main__":
