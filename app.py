@@ -9,7 +9,8 @@ load_dotenv()
 app = Flask(__name__)
 
 # 🔐 Use environment variable (IMPORTANT)
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+SECRET_KEY = os.environ.get("GROQ_API_KEY")
+client = Groq(api_key=SECRET_KEY)
 
 # Load scaler if used
 try:
