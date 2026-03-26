@@ -1,12 +1,15 @@
 from flask import Flask, request, jsonify
 import joblib
-import numpy as np
 import function
-import requests
+from groq import Groq
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-# print(f"Degree is - {function.deg_to_index(90)}")
+app = Flask(__name__)
 
-app = Flask(__name__, static_folder="../frontend/agrimyanmar/build")
+# 🔐 Use environment variable (IMPORTANT)
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 # Load scaler if used
 try:
@@ -16,60 +19,69 @@ except:
 
 @app.route("/")
 def home():
-    return "Rain Prediction API is running!"
+    return "Rain + AI Chat API running!"
 
+# 🌧️ Rain Prediction
 @app.route("/rainTest", methods=['POST'])
 def raintest():
-
     data = request.get_json()
 
-    lan = data.get("lat")
+    lat = data.get("lat")
     lon = data.get("lon")
 
+    apiData = function.weatherApiCall(lat, lon)
 
-    apiData=function.weatherApiCall(lan,lon) #function call to get api weather data
-    
-    data =  [
-            apiData['temp_min'],
-            apiData['temp_max'],
-            apiData['windDir'],
-            apiData['temp'],
-            apiData['humidity'],
-            apiData['windSpeed'],
-            apiData['pressure']
-        
-    ]
-    testRainData = [
-        24.0,   # MinTemp (warm night)
-        28.0,   # MaxTemp (not too hot → cloudy)
-        8,      # WindDir (S → often moist air)
-        26.0,   # temp (current)
-        85.0,   # humidity (VERY high → rain likely)
-        30.0,   # windspeed (km/h → active weather)
-        1002.0  # pressure (LOW → storm/rain)
+    input_data = [
+        apiData['temp_min'],
+        apiData['temp_max'],
+        apiData['windDir'],
+        apiData['temp'],
+        apiData['humidity'],
+        apiData['windSpeed'],
+        apiData['pressure']
     ]
 
-    # Call today/tomorrow prediction functions
-    today_result = function.predict_today(data)
-    tomorrow_result = function.predict_tomorrow(data)
-    rainData=function.predict_rainfall(data)
+    today_result = function.predict_today(input_data)
+    tomorrow_result = function.predict_tomorrow(input_data)
+    rainData = function.predict_rainfall(input_data)
 
-    # Return both results together
     return jsonify({
         "status": "success",
-        "weatherData":{
-            'temp_max':apiData['temp_max'],
-            'temp_min':apiData['temp_min'],
-            'windDir':apiData['windDir'],
-            'temp':apiData['temp'],
-            'humidity':apiData['humidity'],
-            'windSpeed':apiData['windSpeed'],
-            'pressure':apiData['pressure']
-            },
+        "weatherData": apiData,
         "today": today_result,
-        "rainFall":rainData, # mili meter
-        "tomorrow":tomorrow_result, 
+        "rainFall": rainData,
+        "tomorrow": tomorrow_result
     }), 200
+
+
+# 🤖 Chatbot (Groq)
+@app.route("/chatBot", methods=["POST"])
+def chat():
+    data = request.get_json()
+    message = data.get("message")
+
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a climate-smart farming assistant for Myanmar farmers. Please generate the response for short and perfect"
+                },
+                {
+                    "role": "user",
+                    "content": message
+                }
+            ]
+        )
+
+        return jsonify({
+            "reply": response.choices[0].message.content
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
